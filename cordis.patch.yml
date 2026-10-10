@@ -1,0 +1,23 @@
+# The configuration row this bundle contributes when a profile lists it.
+# Every value falls back to an environment variable so the API key is never
+# hardcoded; alternatively copy this row into the profile's own
+# cordis.patch.yml and fill the values there (file permissions should be
+# restrictive). See README.md.
+#
+# 本插件 bundle 贡献的配置行。所有取值回退到环境变量，API key 绝不硬编码；
+# 也可以把这一行拷进 profile 自己的 cordis.patch.yml 填写实际值。
+- insert:
+    - id: weknora-archive
+      # Must be the published/local package name — the loader imports this specifier.
+      name: dsh-weknora-archive
+      config:
+        # WeKnora deployment root or API root, e.g. http://weknora.example.com
+        # or http://weknora.example.com/api/v1 (placeholder — set your own).
+        baseUrl: !!js process.env.WEKNORA_ARCHIVE_BASE_URL ?? ''
+        # Scoped API key. Sensitive: never log it, never commit it.
+        apiKey: !!js process.env.WEKNORA_ARCHIVE_API_KEY
+        # Default target knowledge base id (optional; auto-created per project when absent).
+        knowledgeBaseId: !!js process.env.WEKNORA_ARCHIVE_KB_ID
+        # DSH sessions root; empty = <harness home>/sessions auto-detected.
+        sessionsDir: !!js process.env.WEKNORA_ARCHIVE_SESSIONS_DIR ?? ''
+        maxSummaryChars: !!js Number(process.env.WEKNORA_ARCHIVE_MAX_SUMMARY_CHARS ?? 8000)
