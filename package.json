@@ -40,5 +40,9 @@
   },
   "scripts": {
     "test": "node test/mock.test.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AAAlenwow/dsh-weknora-archive.git"
   }
 }
