@@ -1,6 +1,6 @@
 {
   "name": "dsh-weknora-archive",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Incrementally archive DSH sessions into a WeKnora knowledge base (Tencent WeKnora RAG): extract, summarize, dedupe, upload. 把 DSH 会话增量归档进 WeKnora 知识库（写入侧互补官方只读 dsh-weknora 插件）。",
   "keywords": [
     "deepseek-harness",
