@@ -201,6 +201,13 @@ await check('archiveProject accepts an explicit projectDir', async () => {
   assert.equal(result.project, 'demo');
   assert.equal(result.uploaded.length, 2);
 });
+await check('auto-created KB carries the configured embedding model', async () => {
+  const embedConfig = resolveConfig({ baseUrl: 'http://weknora.invalid', apiKey: 'sk-test', sessionsDir: root, embeddingModelId: 'emb-123' });
+  const client = new MockClient();
+  const result = await archiveProject({ client, config: embedConfig }, { projectKeyword: 'demo--' });
+  assert.equal(result.ok, true);
+  assert.equal(client.lastCreate.embeddingModelId, 'emb-123');
+});
 
 // ---- optional LLM refinement (mock fetch) ---------------------------------
 console.log('llm refinement (mock fetch):');

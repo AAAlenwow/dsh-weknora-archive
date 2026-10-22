@@ -27,3 +27,6 @@
         llmApiKey: !!js process.env.WEKNORA_ARCHIVE_LLM_API_KEY
         llmModel: !!js process.env.WEKNORA_ARCHIVE_LLM_MODEL ?? ''
         llmTimeoutMs: !!js Number(process.env.WEKNORA_ARCHIVE_LLM_TIMEOUT_MS ?? 60000)
+        # Embedding model for auto-created knowledge bases (without it every
+        # document in a fresh KB fails to parse). Get the id from WeKnora.
+        embeddingModelId: !!js process.env.WEKNORA_ARCHIVE_EMBEDDING_MODEL_ID ?? ''

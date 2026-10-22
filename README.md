@@ -38,6 +38,7 @@ node "/Applications/DSH Desktop.app/Contents/Resources/app/node_modules/@deepsee
 | `llmApiKey` | `WEKNORA_ARCHIVE_LLM_API_KEY` | 可选：该端点的 API key |
 | `llmModel` | `WEKNORA_ARCHIVE_LLM_MODEL` | 可选：模型名，如 `MiniMax-M2` |
 | `llmTimeoutMs` | `WEKNORA_ARCHIVE_LLM_TIMEOUT_MS` | 可选：精炼调用超时（默认 60000） |
+| `embeddingModelId` | `WEKNORA_ARCHIVE_EMBEDDING_MODEL_ID` | **强烈建议**：自动新建知识库时携带的 embedding 模型 id——不设则新库所有文档解析失败（parse_status=failed） |
 
 > **LLM 精炼默认关闭**：三个 `llm*` 字段必须同时提供才开启。开启后，归档时把**启发式总结文本**（非会话原文）发给该端点做一次精炼；任何失败都自动回退启发式总结，绝不影响归档本身。注意这意味着总结文本会发往你配置的模型服务商。
 
@@ -118,6 +119,7 @@ Uses DSH's official plugin-config mechanism: the bundle ships a `cordis.patch.ym
 | `llmApiKey` | `WEKNORA_ARCHIVE_LLM_API_KEY` | Optional API key for that endpoint |
 | `llmModel` | `WEKNORA_ARCHIVE_LLM_MODEL` | Optional model name |
 | `llmTimeoutMs` | `WEKNORA_ARCHIVE_LLM_TIMEOUT_MS` | Optional refine-call timeout (default 60000) |
+| `embeddingModelId` | `WEKNORA_ARCHIVE_EMBEDDING_MODEL_ID` | **Strongly recommended**: embedding model id applied to auto-created KBs — without it every document in a fresh KB fails to parse (`parse_status=failed`) |
 
 > **LLM refinement is OFF by default**: all three `llm*` fields must be provided together. When enabled, the *heuristic summary text* (not the raw transcript) is sent to that endpoint once per archived session for polishing; any failure silently falls back to the heuristic summary. Note this means summary text is sent to the model provider you configure.
 
