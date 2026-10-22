@@ -20,10 +20,11 @@ class MockClient {
     this.docs = new Map(Object.entries(docs).map(([k, v]) => [k, v.map((d) => ({ ...d }))]));
   }
   async listKnowledgeBases() { return this.bases; }
-  async createKnowledgeBase(name, description) {
+  async createKnowledgeBase(name, description, embeddingModelId) {
     const id = `kb-${this.bases.length + 1}`;
     this.bases.push({ id, name, description });
     this.docs.set(id, []);
+    this.lastCreate = { name, description, embeddingModelId };
     return { id };
   }
   async listKnowledge(kbId) { return this.docs.get(kbId) ?? []; }
@@ -201,6 +202,13 @@ await check('archiveProject accepts an explicit projectDir', async () => {
   assert.equal(result.project, 'demo');
   assert.equal(result.uploaded.length, 2);
 });
+await check('auto-created KB carries the configured embedding model', async () => {
+  const embedConfig = resolveConfig({ baseUrl: 'http://weknora.invalid', apiKey: 'sk-test', sessionsDir: root, embeddingModelId: 'emb-123' });
+  const client = new MockClient();
+  const result = await archiveProject({ client, config: embedConfig }, { projectKeyword: 'demo--' });
+  assert.equal(result.ok, true);
+  assert.equal(client.lastCreate.embeddingModelId, 'emb-123');
+});
 
 // ---- optional LLM refinement (mock fetch) ---------------------------------
 console.log('llm refinement (mock fetch):');
@@ -237,6 +245,14 @@ try {
   });
   await check('refineSummaryWithLlm refuses to run unconfigured', async () => {
     await assert.rejects(() => refineSummaryWithLlm(config, 'x'.repeat(300)), /not configured/);
+  });
+  await check('dry_run never triggers an LLM call even when refinement is configured', async () => {
+    globalThis.fetch = async () => { throw new Error('FETCH-MUST-NOT-BE-CALLED'); };
+    const client = new MockClient();
+    const result = await archiveProject({ client, config: llmConfig }, { projectKeyword: 'demo2', dryRun: true });
+    assert.equal(result.ok, true);
+    assert.equal(result.uploaded.length, 1);
+    globalThis.fetch = originalFetch;
   });
 } finally {
   globalThis.fetch = originalFetch;

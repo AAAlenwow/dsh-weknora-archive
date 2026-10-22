@@ -38,6 +38,7 @@ node "/Applications/DSH Desktop.app/Contents/Resources/app/node_modules/@deepsee
 | `llmApiKey` | `WEKNORA_ARCHIVE_LLM_API_KEY` | 可选：该端点的 API key |
 | `llmModel` | `WEKNORA_ARCHIVE_LLM_MODEL` | 可选：模型名，如 `MiniMax-M2` |
 | `llmTimeoutMs` | `WEKNORA_ARCHIVE_LLM_TIMEOUT_MS` | 可选：精炼调用超时（默认 60000） |
+| `embeddingModelId` | `WEKNORA_ARCHIVE_EMBEDDING_MODEL_ID` | **强烈建议**：自动新建知识库时携带的 embedding 模型 id——不设则新库所有文档解析失败（parse_status=failed） |
 
 > **LLM 精炼默认关闭**：三个 `llm*` 字段必须同时提供才开启。开启后，归档时把**启发式总结文本**（非会话原文）发给该端点做一次精炼；任何失败都自动回退启发式总结，绝不影响归档本身。注意这意味着总结文本会发往你配置的模型服务商。
 
@@ -49,7 +50,9 @@ node "/Applications/DSH Desktop.app/Contents/Resources/app/node_modules/@deepsee
 调用 weknora_archive_auto 工具（不要带 dry_run），把返回的汇总原样转告我；有失败项目的列出失败原因。
 ```
 
-去重按知识库内文档标题判定，重复执行是幂等的——漏跑、多跑都不会产生重复文档。
+去重按知识库内文档标题判定，重复执行是幂等的——漏跑、多跑都不会产生重复文档。改过 `toolPrefix` 的，提醒里的工具名用对应前缀（如 `my_prefix_auto`）。
+
+> 精炼有最小长度门槛：启发式总结不足约 200 字符时直接采用原文、不发模型请求（派工型会话等低信息场景不值得花这次调用）。
 
 也可把 `cordis.patch.yml` 的 insert 行拷进 profile 自己的 `cordis.patch.yml` 直接填值（注意文件权限）。
 
@@ -116,6 +119,7 @@ Uses DSH's official plugin-config mechanism: the bundle ships a `cordis.patch.ym
 | `llmApiKey` | `WEKNORA_ARCHIVE_LLM_API_KEY` | Optional API key for that endpoint |
 | `llmModel` | `WEKNORA_ARCHIVE_LLM_MODEL` | Optional model name |
 | `llmTimeoutMs` | `WEKNORA_ARCHIVE_LLM_TIMEOUT_MS` | Optional refine-call timeout (default 60000) |
+| `embeddingModelId` | `WEKNORA_ARCHIVE_EMBEDDING_MODEL_ID` | **Strongly recommended**: embedding model id applied to auto-created KBs — without it every document in a fresh KB fails to parse (`parse_status=failed`) |
 
 > **LLM refinement is OFF by default**: all three `llm*` fields must be provided together. When enabled, the *heuristic summary text* (not the raw transcript) is sent to that endpoint once per archived session for polishing; any failure silently falls back to the heuristic summary. Note this means summary text is sent to the model provider you configure.
 
@@ -127,7 +131,9 @@ Create a daily DSH reminder (e.g. 22:00) whose prompt is one line:
 Call the weknora_archive_auto tool (no dry_run) and relay the returned summary verbatim; list any failed projects with their errors.
 ```
 
-Deduplication keys on the document titles already in each KB, so the sweep is idempotent — missed or repeated runs never produce duplicates.
+Deduplication keys on the document titles already in each KB, so the sweep is idempotent — missed or repeated runs never produce duplicates. If you changed `toolPrefix`, use the matching tool name in the reminder (e.g. `my_prefix_auto`).
+
+> Refinement has a minimum-length threshold: heuristic summaries under ~200 characters are uploaded as-is without a model call (low-information sessions like dispatch-only ones are not worth the call).
 
 Alternatively copy the insert row into your profile's own `cordis.patch.yml` with literal values (mind file permissions).
 
