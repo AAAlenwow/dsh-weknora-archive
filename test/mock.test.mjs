@@ -238,6 +238,14 @@ try {
   await check('refineSummaryWithLlm refuses to run unconfigured', async () => {
     await assert.rejects(() => refineSummaryWithLlm(config, 'x'.repeat(300)), /not configured/);
   });
+  await check('dry_run never triggers an LLM call even when refinement is configured', async () => {
+    globalThis.fetch = async () => { throw new Error('FETCH-MUST-NOT-BE-CALLED'); };
+    const client = new MockClient();
+    const result = await archiveProject({ client, config: llmConfig }, { projectKeyword: 'demo2', dryRun: true });
+    assert.equal(result.ok, true);
+    assert.equal(result.uploaded.length, 1);
+    globalThis.fetch = originalFetch;
+  });
 } finally {
   globalThis.fetch = originalFetch;
 }

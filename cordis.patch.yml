@@ -21,3 +21,9 @@
         # DSH sessions root; empty = <harness home>/sessions auto-detected.
         sessionsDir: !!js process.env.WEKNORA_ARCHIVE_SESSIONS_DIR ?? ''
         maxSummaryChars: !!js Number(process.env.WEKNORA_ARCHIVE_MAX_SUMMARY_CHARS ?? 8000)
+        # Optional LLM summary refinement (OpenAI-compatible). All three of
+        # baseUrl / apiKey / model must be set together, or refinement stays off.
+        llmBaseUrl: !!js process.env.WEKNORA_ARCHIVE_LLM_BASE_URL ?? ''
+        llmApiKey: !!js process.env.WEKNORA_ARCHIVE_LLM_API_KEY
+        llmModel: !!js process.env.WEKNORA_ARCHIVE_LLM_MODEL ?? ''
+        llmTimeoutMs: !!js Number(process.env.WEKNORA_ARCHIVE_LLM_TIMEOUT_MS ?? 60000)
