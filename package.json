@@ -1,0 +1,51 @@
+{
+  "name": "dsh-weknora-archive",
+  "version": "0.3.0",
+  "description": "Incrementally archive DSH sessions into a WeKnora knowledge base (RAG + auto wiki), passively capture work habits/style into a local profile store, and aggregate per-project ground truth briefs. 会话归档进 WeKnora + 无感知工作画像 + 项目真实情况简报。",
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "weknora",
+    "knowledge-base",
+    "session-archive",
+    "rag",
+    "wiki",
+    "memory",
+    "work-profile"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "cordis.patch.yml",
+    "lib",
+    "test",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=24.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "compatibility": {
+      "dsh": "0.1.7-alpha.1",
+      "profiles": [
+        "web"
+      ]
+    }
+  },
+  "scripts": {
+    "test": "node test/mock.test.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AAAlenwow/dsh-weknora-archive.git"
+  }
+}
