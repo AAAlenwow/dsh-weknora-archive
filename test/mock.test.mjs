@@ -20,10 +20,11 @@ class MockClient {
     this.docs = new Map(Object.entries(docs).map(([k, v]) => [k, v.map((d) => ({ ...d }))]));
   }
   async listKnowledgeBases() { return this.bases; }
-  async createKnowledgeBase(name, description) {
+  async createKnowledgeBase(name, description, embeddingModelId) {
     const id = `kb-${this.bases.length + 1}`;
     this.bases.push({ id, name, description });
     this.docs.set(id, []);
+    this.lastCreate = { name, description, embeddingModelId };
     return { id };
   }
   async listKnowledge(kbId) { return this.docs.get(kbId) ?? []; }
