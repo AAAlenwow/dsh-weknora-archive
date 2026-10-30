@@ -12,6 +12,9 @@ import { zstdCompressSync } from 'node:zlib';
 import { summarizeSession, summarizeProjectOverview, refineSummaryWithLlm } from '../lib/summarizer.js';
 import { findNewSessions, sessionDocTitle, archiveProject, archiveAllProjects } from '../lib/archive.js';
 import { resolveConfig, redactConfig, normalizeBaseUrl } from '../lib/config.js';
+import { createManifest, addManifestProject, writeManifest } from '../lib/manifest.js';
+import { waitForKnowledge, reconcileDocuments, knowledgeIdOf } from '../lib/ingestion.js';
+import { renderReport, writeReport } from '../lib/visualize.js';
 
 // ---- mock WeKnora client ---------------------------------------------------
 class MockClient {
@@ -257,6 +260,139 @@ try {
 } finally {
   globalThis.fetch = originalFetch;
 }
+
+// ---- v0.4.0: manifest -------------------------------------------------------
+console.log('manifest (v0.4.0):');
+await check('manifest counts uploaded docs by real status and skips', () => {
+  const manifest = createManifest({ dryRun: false });
+  addManifestProject(manifest, {
+    project: 'demo', knowledgeBaseId: 'kb-1', skippedCount: 3,
+    uploaded: [
+      { title: 'a', parseStatus: 'completed' },
+      { title: 'b', parseStatus: 'failed', parseError: 'boom' },
+      { title: 'c', dryRun: true },
+    ],
+  });
+  assert.equal(manifest.summary.completed, 1);
+  assert.equal(manifest.summary.failed, 1);
+  assert.equal(manifest.summary.discovered, 1);
+  assert.equal(manifest.summary.total, 3);
+  assert.equal(manifest.summary.skipped, 3);
+  assert.equal(manifest.documents[1].status, 'failed');
+});
+await check('writeManifest writes atomically and round-trips', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'dsh-wa-manifest-'));
+  const manifest = createManifest({ dryRun: true });
+  addManifestProject(manifest, { project: 'p', knowledgeBaseId: 'kb', uploaded: [{ title: 't', dryRun: true }], skippedCount: 0 });
+  const path = writeManifest(dir, manifest);
+  const { readFileSync } = await import('node:fs');
+  const parsed = JSON.parse(readFileSync(path, 'utf8'));
+  assert.equal(parsed.summary.discovered, 1);
+  assert.ok(parsed.finishedAt);
+});
+
+// ---- v0.4.0: parse-status reconciliation ------------------------------------
+console.log('parse reconciliation (v0.4.0):');
+await check('knowledgeIdOf reads both upload response shapes', () => {
+  assert.equal(knowledgeIdOf({ knowledge_id: 'k-1' }), 'k-1');
+  assert.equal(knowledgeIdOf({ data: { id: 'k-2' } }), 'k-2');
+  assert.equal(knowledgeIdOf({}), null);
+});
+await check('waitForKnowledge resolves completed/failed immediately', async () => {
+  let sleeps = 0;
+  const ok = await waitForKnowledge(
+    { getKnowledge: async () => ({ data: { parse_status: 'completed' } }) },
+    'k-1', { timeoutMs: 5_000, sleep: async () => { sleeps++; }, now: () => 1_000 },
+  );
+  assert.deepEqual(ok, { status: 'completed', error: null });
+  const bad = await waitForKnowledge(
+    { getKnowledge: async () => ({ parse_status: 'failed', error_message: 'no embedding' }) },
+    'k-2', { timeoutMs: 5_000, sleep: async () => {}, now: () => 1_000 },
+  );
+  assert.equal(bad.status, 'failed');
+  assert.ok(bad.error.includes('no embedding'));
+  assert.equal(sleeps, 0);
+});
+await check('waitForKnowledge stays non-success on timeout and unknown ids', async () => {
+  let clock = 0;
+  const parsing = await waitForKnowledge(
+    { getKnowledge: async () => ({ parse_status: 'pending' }) },
+    'k-3', { timeoutMs: 10_000, intervalMs: 1_000, sleep: (ms) => { clock += ms; }, now: () => clock },
+  );
+  assert.equal(parsing.status, 'parsing');
+  assert.ok(parsing.error.length > 0);
+  const noId = await waitForKnowledge({ getKnowledge: async () => ({}) }, null, {});
+  assert.equal(noId.status, 'parsing');
+  assert.ok(!/completed/i.test(noId.error));
+});
+await check('reconcileDocuments annotates statuses and keeps dryRun rows', async () => {
+  const client = { getKnowledge: async (id) => ({ data: { parse_status: id === 'k-ok' ? 'completed' : 'pending' } }) };
+  let clock = 0;
+  const rows = await reconcileDocuments(client, [
+    { title: 'a', knowledgeId: 'k-ok' },
+    { title: 'b', knowledgeId: 'k-wait' },
+    { title: 'c', dryRun: true },
+  ], { timeoutMs: 5_000, intervalMs: 1_000, sleep: (ms) => { clock += ms; }, now: () => clock });
+  assert.equal(rows[0].parseStatus, 'completed');
+  assert.equal(rows[1].parseStatus, 'parsing');
+  assert.equal(rows[2].dryRun, true);
+});
+await check('archiveProject marks uploads completed when parse succeeds', async () => {
+  const client = new MockClient();
+  Object.assign(client, { getKnowledge: async () => ({ data: { parse_status: 'completed' } }) });
+  const result = await archiveProject({ client, config }, { projectKeyword: 'demo--' });
+  assert.equal(result.ok, true);
+  assert.equal(result.uploaded[0].parseStatus, 'completed');
+  assert.equal(result.manifest.summary.completed, 2);
+  assert.equal(result.manifest.projects[0].knowledgeBaseId, result.knowledgeBaseId);
+});
+await check('archive without getKnowledge stays honest: parsing, not completed', async () => {
+  const client = new MockClient();
+  const result = await archiveProject({ client, config }, { projectKeyword: 'demo2' });
+  assert.equal(result.uploaded[0].parseStatus, 'parsing');
+  assert.equal(result.manifest.summary.completed ?? 0, 0);
+});
+
+// ---- v0.4.0: self-contained visual report -----------------------------------
+console.log('visual report (v0.4.0):');
+const REPORT_MANIFEST = {
+  schemaVersion: 1, id: 'abcdef12-3456-7890-abcd-ef1234567890',
+  startedAt: '2026-10-30T00:00:00.000Z', finishedAt: '2026-10-30T00:01:00.000Z', dryRun: false,
+  summary: { total: 3, completed: 1, parsing: 1, failed: 1, discovered: 0, skipped: 2 },
+  documents: [
+    { id: 'k-1', project: 'demo', title: '会话总结: demo_11111111 <ok>', status: 'completed' },
+    { id: 'k-2', project: 'demo', title: '会话总结: demo_22222222', status: 'parsing' },
+    { id: 'k-3', project: 'demo', title: '会话总结: demo_33333333', status: 'failed' },
+  ],
+  projects: [{ name: 'demo', knowledgeBaseId: 'kb-1' }],
+};
+await check('renderReport inlines everything: no CDN, no external script src', () => {
+  const html = renderReport(REPORT_MANIFEST, { motion: false });
+  assert.ok(html.startsWith('<!doctype html>'));
+  assert.ok(html.includes('<script type="module">'));
+  assert.ok(html.includes('id="archive-data"'));
+  assert.ok(!/src=["']https?:/i.test(html), 'no external script sources');
+  assert.ok(!/https?:\/\/cdn/i.test(html));
+  assert.ok(html.includes('&lt;ok&gt;'), 'document titles are HTML-escaped');
+  assert.ok(html.includes('THREE_SRC'), 'three.js payload is embedded');
+});
+await check('writeReport produces a standalone html file next to the manifest', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'dsh-wa-report-'));
+  const path = writeReport(REPORT_MANIFEST, { directory: dir, motion: false });
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(path, 'utf8');
+  assert.ok(path.endsWith('.html'));
+  assert.ok(html.includes('Knowledge Ingest'));
+});
+await check('config resolves visualization/motion/parse windows', () => {
+  const cfg = resolveConfig({ baseUrl: 'http://x.example', apiKey: 'sk-1' });
+  assert.equal(cfg.visualization, true);
+  assert.equal(cfg.motion, true);
+  assert.equal(cfg.parseObservationMs, 60_000);
+  const off = resolveConfig({ baseUrl: 'http://x.example', apiKey: 'sk-1', visualization: 'false', parsePollMs: '250' });
+  assert.equal(off.visualization, false);
+  assert.equal(off.parsePollMs, 250);
+});
 
 if (failures.length > 0) {
   console.error(`\n${failures.length} test(s) FAILED, ${passed} passed`);

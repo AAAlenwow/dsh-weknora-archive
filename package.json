@@ -1,7 +1,7 @@
 {
   "name": "dsh-weknora-archive",
-  "version": "0.3.0",
-  "description": "Incrementally archive DSH sessions into a WeKnora knowledge base (Tencent WeKnora RAG): extract, summarize, dedupe, upload. 把 DSH 会话增量归档进 WeKnora 知识库（写入侧互补官方只读 dsh-weknora 插件）。",
+  "version": "0.4.0",
+  "description": "Incrementally archive DSH sessions into a WeKnora knowledge base (Tencent WeKnora RAG): extract, summarize, dedupe, upload, verify parse status, and render a local three.js ingestion report. 把 DSH 会话增量归档进 WeKnora 知识库（写入侧互补官方只读 dsh-weknora 插件），含解析状态核验与本地 three.js 入库报告。",
   "keywords": [
     "deepseek-harness",
     "dsh",
@@ -21,8 +21,10 @@
   "files": [
     "cordis.patch.yml",
     "lib",
+    "visualizer",
     "test",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=24.0",

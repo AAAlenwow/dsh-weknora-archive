@@ -30,3 +30,13 @@
         # Embedding model for auto-created knowledge bases (without it every
         # document in a fresh KB fails to parse). Get the id from WeKnora.
         embeddingModelId: !!js process.env.WEKNORA_ARCHIVE_EMBEDDING_MODEL_ID ?? ''
+        # v0.4.0 — local ingestion report (manifest snapshot + three.js HTML).
+        # Artifacts default to ~/.dsh/plugin-data/dsh-weknora-archive/reports.
+        # Set WEKNORA_ARCHIVE_VISUALIZATION=false to skip report generation
+        # entirely (archiving itself is unaffected either way).
+        reportDir: !!js process.env.WEKNORA_ARCHIVE_REPORT_DIR ?? ''
+        visualization: !!js (process.env.WEKNORA_ARCHIVE_VISUALIZATION ?? 'true') !== 'false'
+        motion: !!js (process.env.WEKNORA_ARCHIVE_MOTION ?? 'true') !== 'false'
+        # Parse-status observation window after upload (uploaded ≠ ingested).
+        parseObservationMs: !!js Number(process.env.WEKNORA_ARCHIVE_PARSE_OBSERVATION_MS ?? 60000)
+        parsePollMs: !!js Number(process.env.WEKNORA_ARCHIVE_PARSE_POLL_MS ?? 1000)
