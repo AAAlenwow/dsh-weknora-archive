@@ -95,6 +95,12 @@ npm test   # node test/mock.test.mjs，mock 数据 + mock 客户端，无需网�
 
 ---
 
+## License
+
+MIT — see [LICENSE](./LICENSE). The bundled `visualizer/vendor/three.module.min.js` is part of [three.js](https://threejs.org) (MIT); its license text ships in `visualizer/vendor/THREE-LICENSE`.
+
+---
+
 <a id="english"></a>
 # dsh-weknora-archive (English)
 
