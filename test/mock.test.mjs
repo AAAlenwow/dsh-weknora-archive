@@ -343,8 +343,23 @@ await check('archiveProject marks uploads completed when parse succeeds', async 
   const result = await archiveProject({ client, config }, { projectKeyword: 'demo--' });
   assert.equal(result.ok, true);
   assert.equal(result.uploaded[0].parseStatus, 'completed');
-  assert.equal(result.manifest.summary.completed, 2);
+  // First run also uploads the project overview and it joins the SAME
+  // reconciliation + manifest accounting (review fix, not double-counted
+  // into `uploaded`).
+  assert.equal(result.overviewDoc.parseStatus, 'completed');
+  assert.equal(result.manifest.summary.completed, 3);
+  const overviewRow = result.manifest.documents.find((d) => d.title === '项目总览: demo');
+  assert.ok(overviewRow, 'overview doc appears in manifest');
+  assert.equal(overviewRow.status, 'completed');
   assert.equal(result.manifest.projects[0].knowledgeBaseId, result.knowledgeBaseId);
+});
+await check('overview doc without getKnowledge stays parsing in manifest', async () => {
+  const client = new MockClient();
+  const result = await archiveProject({ client, config }, { projectKeyword: 'demo--' });
+  const overviewRow = result.manifest.documents.find((d) => d.title === '项目总览: demo');
+  assert.ok(overviewRow);
+  assert.equal(overviewRow.status, 'parsing');
+  assert.equal((result.manifest.summary.completed ?? 0) + (result.manifest.summary.failed ?? 0), 0);
 });
 await check('archive without getKnowledge stays honest: parsing, not completed', async () => {
   const client = new MockClient();
